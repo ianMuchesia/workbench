@@ -1,0 +1,76 @@
+class BudgetExceeded(Exception):
+    def __init__(self, reason):
+        super().__init__(reason)
+        self.reason = reason
+
+
+class Budget:
+    def __init__(self, usd_limit, token_limit, run_id, prices):
+        self.usd_limit = usd_limit
+        self.token_limit = token_limit
+        self.run_id = run_id
+        self.prices = prices
+        self.tokens_spent = 0
+        self.usd_spent = 0.0
+        self.ledger = []
+        self.prechecked_model = None
+
+    def precheck(self, model, input_tokens, max_output_tokens):
+        if not max_output_tokens:
+            raise ValueError("max_output_tokens must be set and greater than 0")
+
+        if model not in self.prices:
+            self.block(model, "unknown_model")
+
+        worst_case_tokens = input_tokens + max_output_tokens
+        if self.tokens_spent + worst_case_tokens >= self.token_limit:
+            self.block(model, "token_limit")
+
+        price = self.prices[model]
+        worst_case_usd = (
+            input_tokens * price["input_per_m"] / 1_000_000
+            + max_output_tokens * price["output_per_m"] / 1_000_000
+        )
+        if self.usd_spent + worst_case_usd >= self.usd_limit:
+            self.block(model, "usd_limit")
+
+        self.prechecked_model = model
+
+    def charge(self, model, input_tokens, output_tokens):
+        if self.prechecked_model is None:
+            raise RuntimeError("charge() called without a passed precheck()")
+        if self.prechecked_model != model:
+            raise RuntimeError("charge() model does not match the prechecked model")
+
+        price = self.prices[model]
+        usd = (
+            input_tokens * price["input_per_m"] / 1_000_000
+            + output_tokens * price["output_per_m"] / 1_000_000
+        )
+
+        self.tokens_spent += input_tokens + output_tokens
+        self.usd_spent += usd
+
+        self.ledger.append(
+            {
+                "run_id": self.run_id,
+                "model": model,
+                "status": "allowed",
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "usd": usd,
+            }
+        )
+
+        self.prechecked_model = None
+
+    def block(self, model, reason):
+        self.ledger.append(
+            {
+                "run_id": self.run_id,
+                "model": model,
+                "status": "blocked",
+                "reason": reason,
+            }
+        )
+        raise BudgetExceeded(reason)
