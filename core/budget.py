@@ -1,3 +1,6 @@
+from datetime import UTC, datetime
+
+
 class BudgetExceeded(Exception):
     def __init__(self, reason):
         super().__init__(reason)
@@ -5,11 +8,14 @@ class BudgetExceeded(Exception):
 
 
 class Budget:
-    def __init__(self, usd_limit, token_limit, run_id, prices):
+    def __init__(self, usd_limit, token_limit, run_id, prices, kes_rate, kes_rate_date):
         self.usd_limit = usd_limit
         self.token_limit = token_limit
         self.run_id = run_id
         self.prices = prices
+        self.kes_rate = kes_rate
+        self.kes_rate_date = kes_rate_date
+
         self.tokens_spent = 0
         self.usd_spent = 0.0
         self.ledger = []
@@ -53,12 +59,16 @@ class Budget:
 
         self.ledger.append(
             {
+                "timestamp": datetime.now(UTC).isoformat(),
                 "run_id": self.run_id,
                 "model": model,
                 "status": "allowed",
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
                 "usd": usd,
+                "kes": usd * self.kes_rate,
+                "kes_rate": self.kes_rate,
+                "kes_rate_date": self.kes_rate_date,
             }
         )
 
