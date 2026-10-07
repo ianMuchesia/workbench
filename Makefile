@@ -1,4 +1,4 @@
-.PHONY: help up down test lint
+.PHONY: help up down test lint demo
 
 help:
 	@echo "Targets:"
@@ -6,6 +6,7 @@ help:
 	@echo "  down  docker compose down"
 	@echo "  test  uv run pytest -q tests/spec tests/unit"
 	@echo "  lint  uv run ruff check ."
+	@echo "  demo  kill switch evidence run -> evidence/killswitch_demo.txt"
 
 up:
 	docker compose up -d
@@ -18,3 +19,6 @@ test:
 
 lint:
 	uv run ruff check .
+
+demo:
+	uv run python -m scripts.killswitch_demo | tee evidence/killswitch_demo.txt

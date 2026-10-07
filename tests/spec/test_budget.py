@@ -188,3 +188,24 @@ def test_allowed_row_has_kes_and_timestamp():
 
     assert row["kes_rate_date"] == "2026-09-29"
     assert row["timestamp"]
+
+
+def test_blocked_and_allowed_rows_have_same_columns():
+    budget = Budget(
+        usd_limit=1.00,
+        token_limit=100,
+        run_id="test-1",
+        prices=PRICES,
+        kes_rate=130.0,
+        kes_rate_date="2026-09-29",
+    )
+    budget.precheck(model="paid-model", input_tokens=30, max_output_tokens=30)
+    budget.charge(model="paid-model", input_tokens=30, output_tokens=30)
+    with pytest.raises(BudgetExceeded):
+        budget.precheck(model="paid-model", input_tokens=30, max_output_tokens=30)
+    allowed_row = budget.ledger[0]
+    blocked_row = budget.ledger[1]
+    assert set(blocked_row) == set(allowed_row)
+    assert blocked_row["timestamp"]
+    assert blocked_row["usd"] == 0.0
+    assert blocked_row["kes"] == 0.0

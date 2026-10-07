@@ -26,11 +26,11 @@ class Budget:
             raise ValueError("max_output_tokens must be set and greater than 0")
 
         if model not in self.prices:
-            self.block(model, "unknown_model")
+            self.block(model, "unknown_model", input_tokens, max_output_tokens)
 
         worst_case_tokens = input_tokens + max_output_tokens
         if self.tokens_spent + worst_case_tokens >= self.token_limit:
-            self.block(model, "token_limit")
+            self.block(model, "token_limit", input_tokens, max_output_tokens)
 
         price = self.prices[model]
         worst_case_usd = (
@@ -38,7 +38,7 @@ class Budget:
             + max_output_tokens * price["output_per_m"] / 1_000_000
         )
         if self.usd_spent + worst_case_usd >= self.usd_limit:
-            self.block(model, "usd_limit")
+            self.block(model, "usd_limit", input_tokens, max_output_tokens)
 
         self.prechecked_model = model
 
@@ -57,12 +57,18 @@ class Budget:
         self.tokens_spent += input_tokens + output_tokens
         self.usd_spent += usd
 
+        self.write_row(model, "allowed", None, input_tokens, output_tokens, usd)
+
+        self.prechecked_model = None
+
+    def write_row(self, model, status, reason, input_tokens, output_tokens, usd):
         self.ledger.append(
             {
                 "timestamp": datetime.now(UTC).isoformat(),
                 "run_id": self.run_id,
                 "model": model,
-                "status": "allowed",
+                "status": status,
+                "reason": reason,
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
                 "usd": usd,
@@ -72,15 +78,6 @@ class Budget:
             }
         )
 
-        self.prechecked_model = None
-
-    def block(self, model, reason):
-        self.ledger.append(
-            {
-                "run_id": self.run_id,
-                "model": model,
-                "status": "blocked",
-                "reason": reason,
-            }
-        )
+    def block(self, model, reason, input_tokens, output_tokens):
+        self.write_row(model, "blocked", reason, input_tokens, output_tokens, 0.0)
         raise BudgetExceeded(reason)
