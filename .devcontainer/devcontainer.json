@@ -9,7 +9,9 @@
     "ghcr.io/devcontainers/features/azure-cli:1": {
       "installBicep": true
     },
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "moby": false
+    }
   },
   "postCreateCommand": "pipx install uv pre-commit && uv sync && pre-commit install",
   "customizations": {
