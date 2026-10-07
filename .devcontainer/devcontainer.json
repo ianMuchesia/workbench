@@ -13,6 +13,9 @@
       "moby": false
     }
   },
+  "containerEnv": {
+    "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv-workbench"
+  },
   "postCreateCommand": "pipx install uv pre-commit && uv sync && pre-commit install",
   "customizations": {
     "vscode": {
